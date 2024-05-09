@@ -1,0 +1,75 @@
+package com.example.myapp
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MyApp()
+        }
+    }
+}
+
+@Composable
+fun MyApp() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center, // 여기에 추가
+            modifier = Modifier.fillMaxSize() // 전체 화면을 사용하도록 Modifier 추가
+        ) {
+            var showDetails by remember { mutableStateOf(false) }
+
+            Button(
+                onClick = { showDetails = !showDetails },
+                contentPadding = PaddingValues(16.dp)
+            ) {
+                Text("Show INFP Details")
+            }
+
+            if (showDetails) {
+                INFPDescription()
+            }
+        }
+    }
+}
+
+
+@Composable
+fun INFPDescription() {
+    Column(
+        modifier = Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("INFP 성격 유형", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "INFP는 내향적이며 직관적, 감정적, 인식적인 성향을 가지고 있습니다. " +
+                    "INFP는 이상적이고 창의적이며, 개방적인 마음으로 새로운 가능성을 탐색합니다. " +
+                    "현실보다는 상상을, 단순한 사실보다는 의미를 중시합니다.",
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
