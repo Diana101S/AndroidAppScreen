@@ -1,0 +1,440 @@
+package com.example.project_dahee
+
+import android.annotation.SuppressLint
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.project_dahee.ui.theme.Project_daheeTheme
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.analytics
+import com.google.firebase.analytics.logEvent
+import com.google.mlkit.common.model.DownloadConditions
+import com.google.mlkit.nl.translate.TranslateLanguage
+import com.google.mlkit.nl.translate.Translation
+import com.google.mlkit.nl.translate.TranslatorOptions
+
+class MainActivity : ComponentActivity() {
+    private lateinit var firebaseAnalytics: FirebaseAnalytics
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Obtain the FirebaseAnalytics instance.
+        firebaseAnalytics = Firebase.analytics
+
+
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            Project_daheeTheme {
+                Main(firebaseAnalytics)
+            }
+        }
+    }
+}
+
+@Composable
+fun Main(firebaseAnalytics:FirebaseAnalytics) {
+    var inputText by remember { mutableStateOf("") }
+    var translatedText by remember { mutableStateOf("") }
+    var id = "dahee"
+    var name = "dahee"
+
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+
+        // Top Image
+        Image(
+            painter = painterResource(id = R.drawable.papago_logo), // Replace with your image resource
+            contentDescription = "Top Image",
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .padding(bottom = 16.dp)
+        )
+
+        // Top bar with language selectors and swap button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "한국어", fontSize = 20.sp)
+            IconButton(onClick = { /* Swap languages */
+                firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_ITEM) {
+                    param(FirebaseAnalytics.Param.ITEM_ID, id)
+                    param(FirebaseAnalytics.Param.ITEM_NAME, name)
+                    param(FirebaseAnalytics.Param.CONTENT_TYPE, "IconButton")
+                }
+            }) {
+                Icon(
+                    Icons.Filled.ArrowForward,
+                    contentDescription = "Swap Languages"
+                )
+            }
+            Text(text = "영어", fontSize = 20.sp)
+        }
+
+        // Input text field
+        BasicTextField(
+            value = inputText,
+            onValueChange = { inputText = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            decorationBox = { innerTextField ->
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .background(Color.LightGray)
+                ) {
+                    if (inputText.isEmpty()) {
+                        Text(
+                            "번역할 내용을 입력하세요.",
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
+
+        // Translate button
+        var isDownloaded by remember { mutableStateOf(false) }
+        val koEnTranslator = remember {
+            val options = TranslatorOptions.Builder()
+                .setSourceLanguage(TranslateLanguage.KOREAN)
+                .setTargetLanguage(TranslateLanguage.ENGLISH)
+                .build()
+            Translation.getClient(options)
+        }
+        LaunchedEffect(key1 = koEnTranslator) {
+            val conditions = DownloadConditions.Builder()
+                .requireWifi()
+                .build()
+            koEnTranslator.downloadModelIfNeeded(conditions)
+                .addOnSuccessListener { isDownloaded = true }
+        }
+
+        Button(
+            onClick = {
+                koEnTranslator.translate(inputText)
+                    .addOnSuccessListener { translation ->
+                        translatedText = translation
+                    }
+                    .addOnFailureListener { exception ->
+                        // Handle translation error
+                    }
+            },
+            enabled = isDownloaded,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(text = "번역하기")
+        }
+
+        // Translated text display
+        Text(
+            text = translatedText,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Bottom buttons (Voice, Conversation, Image)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(0.dp)
+        ) {
+            Button(
+                onClick = { /* Handle Voice Translation */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(0),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(
+                        0xFF1FE16E
+                    )
+                ) // Green
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_mic_24), // Replace with your mic icon resource
+                        contentDescription = "음성",
+                        modifier = Modifier.size(23.dp)
+                    )
+                    Text("음성", fontSize = 16.sp)
+                }
+            }
+            Button(
+                onClick = { /* Handle Conversation Translation */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(0),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(
+                        0xFF50C9FE
+                    )
+                ), // Light Blue
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_account_circle_24), // Replace with your chat icon resource
+                        contentDescription = "대화",
+                        modifier = Modifier.size(23.dp)
+                    )
+                    Text("대화", fontSize = 16.sp)
+                }
+            }
+            Button(
+                onClick = { /* Handle Image Translation */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(0),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(
+                        0xFF4996FE
+                    )
+                ), // Blue
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_add_photo_alternate_24), // Replace with your image icon resource
+                        contentDescription = "이미지",
+                        modifier = Modifier.size(23.dp)
+                    )
+                    Text("이미지", fontSize = 16.sp)
+                }
+            }
+        }
+    }
+}
+
+// Dummy translation function
+fun translateText(text: String): String {
+    return "Translated: $text"
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewMain() {
+    Project_daheeTheme {
+        Main_preview()
+    }
+}
+
+@Composable
+fun Main_preview() { //preview용 복제
+    var inputText by remember { mutableStateOf("") }
+    var translatedText by remember { mutableStateOf("") }
+    var id = "dahee"
+    var name = "dahee"
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Top bar with language selectors and swap button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "한국어", fontSize = 20.sp)
+            IconButton(onClick = { /* Swap languages */
+
+            }) {
+                Icon(
+                    Icons.Filled.ArrowForward,
+                    contentDescription = "Swap Languages"
+                )
+            }
+            Text(text = "영어", fontSize = 20.sp)
+        }
+
+        // Input text field
+        BasicTextField(
+            value = inputText,
+            onValueChange = { inputText = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            decorationBox = { innerTextField ->
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                        .background(Color.LightGray)
+                ) {
+                    if (inputText.isEmpty()) {
+                        Text(
+                            "번역할 내용을 입력하세요.",
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
+
+        // Translate button
+        var isDownloaded by remember { mutableStateOf(false) }
+        val koEnTranslator = remember {
+            val options = TranslatorOptions.Builder()
+                .setSourceLanguage(TranslateLanguage.KOREAN)
+                .setTargetLanguage(TranslateLanguage.ENGLISH)
+                .build()
+            Translation.getClient(options)
+        }
+        LaunchedEffect(key1 = koEnTranslator) {
+            val conditions = DownloadConditions.Builder()
+                .requireWifi()
+                .build()
+            koEnTranslator.downloadModelIfNeeded(conditions)
+                .addOnSuccessListener { isDownloaded = true }
+        }
+
+        Button(
+            onClick = {
+                koEnTranslator.translate(inputText)
+                    .addOnSuccessListener { translation ->
+                        translatedText = translation
+                    }
+                    .addOnFailureListener { exception ->
+                        // Handle translation error
+                    }
+            },
+            enabled = isDownloaded,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            Text(text = "번역하기")
+        }
+
+        // Translated text display
+        Text(
+            text = translatedText,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Bottom buttons (Voice, Conversation, Image)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(0.dp)
+        ) {
+            Button(
+                onClick = { /* Handle Voice Translation */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(0),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(
+                        0xFF00FF00
+                    )
+                ) // Green
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.icon_mic_jjin), // Replace with your mic icon resource
+                        contentDescription = "음성",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text("음성", fontSize = 16.sp)
+                }
+            }
+            Button(
+                onClick = { /* Handle Conversation Translation */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(0),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(
+                        0xFF00FFFF
+                    )
+                ), // Light Blue
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.icon_chat_jjin), // Replace with your chat icon resource
+                        contentDescription = "대화",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text("대화", fontSize = 16.sp)
+                }
+            }
+            Button(
+                onClick = { /* Handle Image Translation */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(0),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(
+                        0xFF0000FF
+                    )
+                ), // Blue
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.icon_image_jjin), // Replace with your image icon resource
+                        contentDescription = "이미지",
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text("이미지", fontSize = 16.sp)
+                }
+            }
+        }
+    }
+}
